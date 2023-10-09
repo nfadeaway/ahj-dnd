@@ -1,200 +1,60 @@
-const cardRemoveBtn = document.createElement("div");
-cardRemoveBtn.classList.add("card-remove-btn");
-cardRemoveBtn.textContent = "\u{2715}";
+import State from "./state";
+import CardManager from "./cardManager";
+import CardMovementController from "./cardMovementController";
 
 const container = document.querySelector(".main-container");
-const addCardBtns = document.querySelectorAll(".add-card-btn");
-const addNewCardCancelBtns = document.querySelectorAll(
-  ".add-new-card-cancel-btn",
-);
-const addNewCardBtns = document.querySelectorAll(".add-new-card-btn");
+const state = new State();
+const cardManager = new CardManager(container);
+const cardMovementController = new CardMovementController();
 
 window.addEventListener("unload", () => {
-  const cardsTodo = [];
-  container
-    .querySelector(".todo")
-    .querySelectorAll(".card")
-    .forEach((card) => cardsTodo.push(card.innerText));
-  const cardsInProgress = [];
-  container
-    .querySelector(".in-progress")
-    .querySelectorAll(".card")
-    .forEach((card) => cardsInProgress.push(card.innerText));
-  const cardsDone = [];
-  container
-    .querySelector(".done")
-    .querySelectorAll(".card")
-    .forEach((card) => cardsDone.push(card.innerText));
-  const cards = {
-    todo: cardsTodo,
-    "in-progress": cardsInProgress,
-    done: cardsDone,
-  };
-  localStorage.setItem("cards", JSON.stringify(cards));
+  state.saveState(container);
 });
 
 window.addEventListener("load", () => {
-  if (localStorage.getItem("cards")) {
-    const cardContents = JSON.parse(localStorage.getItem("cards"));
-    let cardsArea;
-    for (const cardContent in cardContents) {
-      cardsArea = container
-        .querySelector(`.${cardContent}`)
-        .querySelector(".cards");
-      cardContents[cardContent].forEach((content) => {
-        const cardDiv = document.createElement("div");
-        cardDiv.classList.add("card");
-        cardDiv.innerText = content;
-        cardsArea.appendChild(cardDiv);
-      });
-    }
-    localStorage.clear();
-  }
+  state.loadState();
+  state.showCards(container);
 });
 
 container.addEventListener("mouseover", (e) => {
-  if (e.target.classList.contains("card")) {
-    e.target.appendChild(cardRemoveBtn);
-    cardRemoveBtn.classList.add("active");
-  } else if (!e.target.classList.contains("card-remove-btn")) {
-    cardRemoveBtn.classList.remove("active");
-  }
+  cardManager.showCardRemoveBtn(e.target);
 });
 
-cardRemoveBtn.addEventListener("click", (e) => {
-  e.target.closest(".card").remove();
+cardManager.cardRemoveBtn.addEventListener("click", (e) => {
+  cardManager.removeCard(e.target);
 });
 
-addCardBtns.forEach((addCardBtn) => {
+cardManager.addCardBtns.forEach((addCardBtn) => {
   addCardBtn.addEventListener("click", (e) => {
-    e.target.classList.add("hidden");
-    e.target
-      .closest(".column")
-      .querySelector(".add-card-container")
-      .classList.toggle("hidden");
+    cardManager.hideAddCardBtn(e.target);
   });
 });
 
-addNewCardCancelBtns.forEach((addNewCardCancelBtn) => {
+cardManager.addNewCardCancelBtns.forEach((addNewCardCancelBtn) => {
   addNewCardCancelBtn.addEventListener("click", (e) => {
-    e.target.closest(".add-card-container").classList.toggle("hidden");
-    e.target
-      .closest(".column")
-      .querySelector(".add-card-btn")
-      .classList.toggle("hidden");
-    const textarea = e.target
-      .closest(".add-card-container")
-      .querySelector(".add-card-input");
-    textarea.value = "";
-    if (textarea.classList.contains("red-border")) {
-      textarea.classList.remove("red-border");
-    }
+    cardManager.hideAddCardContainer(e.target);
   });
 });
 
-addNewCardBtns.forEach((addNewCardBtn) => {
+cardManager.addNewCardBtns.forEach((addNewCardBtn) => {
   addNewCardBtn.addEventListener("click", (e) => {
-    const textarea = e.target
-      .closest(".add-card-container")
-      .querySelector(".add-card-input");
-    if (textarea.value) {
-      const newCard = document.createElement("div");
-      newCard.classList.add("card");
-      newCard.textContent = textarea.value;
-      e.target.closest(".column").querySelector(".cards").appendChild(newCard);
-      textarea.value = "";
-      e.target.closest(".add-card-container").classList.toggle("hidden");
-      e.target
-        .closest(".column")
-        .querySelector(".add-card-btn")
-        .classList.toggle("hidden");
-    } else {
-      textarea.classList.add("red-border");
-    }
+    cardManager.addNewCard(e.target);
   });
 });
-
-let actualElement;
-let shiftX;
-let shiftY;
-let emptyPlace;
-
-function moveAt(pageX, pageY) {
-  actualElement.style.left = pageX - shiftX + "px";
-  actualElement.style.top = pageY - shiftY + "px";
-}
 
 const onMouseMove = (e) => {
-  moveAt(e.pageX, e.pageY);
-
-  actualElement.hidden = true;
-  let elemBelow = document.elementFromPoint(e.clientX, e.clientY);
-  actualElement.hidden = false;
-
-  if (elemBelow.classList.contains("card")) {
-    const elemBelowRect = elemBelow.getBoundingClientRect();
-    const actualElementRect = actualElement.getBoundingClientRect();
-    const middleYCoordElemBelow =
-      elemBelowRect.bottom - (elemBelowRect.bottom - elemBelowRect.top) / 2;
-    const middleYCoordActualElement =
-      actualElementRect.bottom -
-      (actualElementRect.bottom - actualElementRect.top) / 2;
-    if (middleYCoordActualElement < middleYCoordElemBelow) {
-      elemBelow.before(emptyPlace);
-    } else {
-      elemBelow.after(emptyPlace);
-    }
-  } else if (
-    elemBelow.classList.contains("add-card-btn") &&
-    elemBelow.closest(".column").querySelector(".cards").children.length === 0
-  ) {
-    elemBelow
-      .closest(".column")
-      .querySelector(".cards")
-      .appendChild(emptyPlace);
-  }
+  cardMovementController.moveCard(e);
 };
 
 const onMouseUp = () => {
-  actualElement.classList.remove("selected");
-  actualElement.style.removeProperty("top");
-  actualElement.style.removeProperty("left");
-  actualElement.querySelector(".card-remove-btn").classList.toggle("active");
-
-  emptyPlace.closest(".cards").insertBefore(actualElement, emptyPlace);
-  emptyPlace.remove();
-
-  actualElement = undefined;
-  shiftX = undefined;
-  shiftY = undefined;
-  emptyPlace = undefined;
+  cardMovementController.dropCard();
   document.removeEventListener("mouseup", onMouseUp);
   document.removeEventListener("mousemove", onMouseMove);
 };
 
 container.addEventListener("mousedown", (e) => {
   if (e.target.classList.contains("card")) {
-    e.preventDefault();
-    actualElement = e.target;
-    actualElement.classList.add("selected");
-    actualElement.querySelector(".card-remove-btn").classList.toggle("active");
-    emptyPlace = document.createElement("div");
-    emptyPlace.classList.add("place");
-    emptyPlace.style.height =
-      actualElement.getBoundingClientRect().height + "px";
-    emptyPlace.style.width = actualElement.getBoundingClientRect().width + "px";
-
-    actualElement.nextSibling
-      ? actualElement.nextSibling.before(emptyPlace)
-      : actualElement.closest(".cards").appendChild(emptyPlace);
-
-    shiftX = e.clientX - actualElement.getBoundingClientRect().left;
-    shiftY = e.clientY - actualElement.getBoundingClientRect().top;
-
-    document.body.appendChild(actualElement);
-
-    moveAt(e.pageX, e.pageY);
-
+    cardMovementController.selectCard(e);
     document.addEventListener("mouseup", onMouseUp);
     document.addEventListener("mousemove", onMouseMove);
   }
