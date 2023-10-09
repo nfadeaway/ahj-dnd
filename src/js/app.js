@@ -144,6 +144,14 @@ const onMouseMove = (e) => {
     } else {
       elemBelow.after(emptyPlace);
     }
+  } else if (
+    elemBelow.classList.contains("add-card-btn") &&
+    elemBelow.closest(".column").querySelector(".cards").children.length === 0
+  ) {
+    elemBelow
+      .closest(".column")
+      .querySelector(".cards")
+      .appendChild(emptyPlace);
   }
 };
 
