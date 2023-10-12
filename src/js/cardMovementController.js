@@ -82,8 +82,6 @@ export default class CardMovementController {
     this.shiftX = e.clientX - this.actualElement.getBoundingClientRect().left;
     this.shiftY = e.clientY - this.actualElement.getBoundingClientRect().top;
 
-    document.body.appendChild(this.actualElement);
-
     this.moveAt(e.pageX, e.pageY);
   }
 }
